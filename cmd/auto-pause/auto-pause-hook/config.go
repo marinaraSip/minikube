@@ -32,7 +32,7 @@ import (
 
 var (
 	webhookName       = "env-inject-webhook"
-	webhookConfigName = "env-inject.zyanshu.io"
+	webhookConfigName = "env-inject.frop.io"
 	skipLabel         = "auto-pause-skip"
 )
 
