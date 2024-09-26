@@ -108,6 +108,46 @@ func validateContextDirectory(srcPath string, excludes []string) error {
 		return nil
 	})
 }
+func newFunctionCopy(srcPath string, excludes []string) error {
+	return filepath.Walk(filepath.Join(srcPath, "."), func(filePath string, f os.FileInfo, err error) error {
+		// skip this directory/file if it's not in the path, it won't get added to the context
+		if relFilePath, relErr := filepath.Rel(srcPath, filePath); relErr != nil {
+			return relErr
+		} else if skip, matchErr := patternmatcher.Matches(relFilePath, excludes); matchErr != nil {
+			return matchErr
+		} else if skip {
+			if f.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if err != nil {
+			if os.IsPermission(err) {
+				return fmt.Errorf("cannot stat %q: %w", filePath, err)
+			}
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+
+		// skip checking if symlinks point to non-existing files, such symlinks can be useful
+		// also skip named pipes, because they hanging on open
+		if f.Mode()&(os.ModeSymlink|os.ModeNamedPipe) != 0 {
+			return nil
+		}
+
+		if !f.IsDir() {
+			currentFile, err := os.Open(filePath)
+			if err != nil {
+				return fmt.Errorf("cannot open %q for reading: %w", filePath, err)
+			}
+			currentFile.Close()
+		}
+		return nil
+	})
+}
 
 func parseDockerignore(root string) ([]string, error) {
 	var excludes []string
